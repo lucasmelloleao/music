@@ -30,6 +30,9 @@ jobs:
             git pull origin main
           fi
 
+          # Cria o arquivo .env no servidor a partir do Secret do GitHub
+          echo "${{ secrets.ENV_FILE }}" > .env
+
           # Garante permissão de execução
           chmod +x stream.sh
 
