@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Studio & Stream Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .glow-dot { animation: pulse-glow 2s infinite ease-in-out; }
+    input[type=range]::-webkit-slider-thumb {
+      height: 12px;
+      width: 12px;
+      border-radius: 50%;
+      background: #818cf8;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-compact-disc text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            SoundStream Studio
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v2.1</span>
+          </h1>
+          <p class="text-xs text-slate-400">Hub de Produção Musical IA, Suno Integration & Live 24/7</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 glow-dot"></span>
+          Servidor Conectado
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full p-6 space-y-6 flex-1">
+
+    <!-- Seção Suno Playlist Externa -->
+    <section class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 bg-gradient-to-tr from-amber-500 to-rose-500 rounded-lg text-white shadow-md">
+            <i class="fa-solid fa-bolt text-sm"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Suno Playlist Explorer</h2>
+            <p class="text-xs text-slate-400">Importe e reproduza faixas direto do Suno.com</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <input id="playlistUrlInput" type="text"
+            value="https://suno.com/playlist/990fd5fe-70d2-449b-8a4d-3cb0a7d3e805"
+            placeholder="URL ou ID da playlist do Suno"
+            class="px-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 w-full md:w-96 focus:outline-none focus:border-indigo-500 font-mono">
+          <button id="btnFetchPlaylist" onclick="carregarSunoPlaylist()"
+            class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-600/20">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Buscar
+          </button>
+        </div>
+      </div>
+
+      <!-- Card da Playlist Atual -->
+      <div id="playlistHeader" class="hidden mb-4 p-4 rounded-xl bg-slate-950/50 border border-slate-800/70 flex items-center gap-4">
+        <img id="playlistCover" src="" class="w-16 h-16 rounded-lg object-cover bg-slate-800 shadow-md">
+        <div>
+          <h3 id="playlistTitle" class="text-sm font-bold text-white"></h3>
+          <p id="playlistDesc" class="text-xs text-slate-400 line-clamp-1 mt-0.5"></p>
+          <span id="playlistStats" class="text-[11px] text-indigo-400 font-medium mt-1 inline-block"></span>
+        </div>
+      </div>
+
+      <!-- Grid de Músicas do Suno -->
+      <div id="sunoTracksContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- Top Grid: IA Generation & Upload -->
+    <div class="grid lg:grid-cols-2 gap-6">
+
+      <!-- Gerador de Música IA -->
+      <section class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden backdrop-blur-sm">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
+            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white">Gerar com Inteligência Artificial</h2>
+            <p class="text-xs text-slate-400">Crie trilhas completas com comandos em texto</p>
+          </div>
+        </div>
+
+        <form onsubmit="gerarMusica(event)" class="space-y-4">
+          <div>
+            <textarea id="promptInput" rows="3" required
+              placeholder="Ex: Calm lofi hip hop beat for study, smooth rhodes piano and vinyl dust crackle..."
+              class="w-full p-3 bg-slate-950/70 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition resize-none"></textarea>
+          </div>
+          
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <span class="text-slate-400 self-center mr-1">Sugestões:</span>
+            <button type="button" onclick="setPrompt('Chill lofi hip hop beat with warm rhodes and soft drums')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">☕ Lofi</button>
+            <button type="button" onclick="setPrompt('Dark ambient synthwave with deep bassline and retro drums')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">🌌 Synthwave</button>
+            <button type="button" onclick="setPrompt('Energetic cyber electro dance track 128 bpm')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">⚡ Electro</button>
+          </div>
+
+          <button id="btnGenerate" type="submit"
+            class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/25 active:scale-[0.99] disabled:opacity-50">
+            <i class="fa-solid fa-sparkles"></i>
+            <span id="btnGenerateText">Gerar Faixa de Áudio</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Upload Manual -->
+      <section class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between backdrop-blur-sm">
+        <div>
+          <div class="flex items-center gap-2.5 mb-4">
+            <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
+              <i class="fa-solid fa-cloud-arrow-up text-sm"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-white">Upload de Arquivo Local</h2>
+              <p class="text-xs text-slate-400">Adicione arquivos MP3 diretamente ao diretório do stream</p>
+            </div>
+          </div>
+
+          <div id="dropZone"
+            onclick="document.getElementById('audioFileInput').click()"
+            class="border-2 border-dashed border-slate-700 hover:border-indigo-500/70 bg-slate-950/40 hover:bg-slate-950/80 rounded-xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center group">
+            <input id="audioFileInput" type="file" accept="audio/mp3,audio/*" class="hidden" onchange="previewUpload(this)">
+            <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-600/20 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 mb-2 transition">
+              <i class="fa-solid fa-music text-lg"></i>
+            </div>
+            <p id="uploadLabel" class="text-sm font-medium text-slate-300">Clique para selecionar ou arraste um arquivo MP3</p>
+            <p class="text-xs text-slate-500 mt-1">Formatos suportados: .mp3, .wav, .m4a</p>
+          </div>
+        </div>
+
+        <button id="btnUpload" onclick="uploadAudio()" disabled
+          class="w-full mt-4 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-upload"></i>
+          <span id="btnUploadText">Enviar para Storage</span>
+        </button>
+      </section>
+
+    </div>
+
+    <!-- Repository Section -->
+    <section class="bg-slate-900/70 border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div class="flex items-center gap-3">
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-music text-indigo-400"></i>
+            Faixas no Storage Local
+          </h2>
+          <span id="trackCount" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">0 faixas</span>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
+            <input id="searchInput" oninput="filtrarFaixas()" type="text" placeholder="Buscar faixas..."
+              class="w-full pl-8 pr-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+          </div>
+          <button onclick="carregarFaixas()" title="Recarregar lista"
+            class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-950/40 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
+              <th class="py-3 px-5">Faixa</th>
+              <th class="py-3 px-4">Tamanho</th>
+              <th class="py-3 px-4">Data</th>
+              <th class="py-3 px-4">Player</th>
+              <th class="py-3 px-5 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tracksTable" class="text-sm divide-y divide-slate-800/60">
+            <tr>
+              <td colspan="5" class="py-10 text-center text-slate-500">
+                <i class="fa-solid fa-circle-notch fa-spin text-xl mb-2"></i>
+                <p>Carregando faixas...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sticky Bottom Global Music Player -->
+  <aside id="globalPlayer" class="sticky bottom-0 z-40 bg-slate-900/95 border-t border-slate-800 backdrop-blur-xl px-6 py-3 transition shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      
+      <!-- Current Song Info -->
+      <div class="flex items-center gap-3 w-full sm:w-1/4 min-w-0">
+        <img id="playerCoverImg" src="" class="hidden w-11 h-11 rounded-lg object-cover shadow border border-slate-700">
+        <div id="playerIconBox" class="w-11 h-11 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+          <i class="fa-solid fa-waveform-lines text-lg" id="playerIcon"></i>
+        </div>
+        <div class="truncate">
+          <p id="currentTrackTitle" class="text-xs font-semibold text-white truncate">Nenhuma faixa em reprodução</p>
+          <p id="currentTrackMeta" class="text-[11px] text-slate-400">Selecione uma faixa acima</p>
+        </div>
+      </div>
+
+      <!-- Audio Element & Controls -->
+      <div class="flex-1 w-full max-w-xl flex flex-col items-center gap-1.5">
+        <div class="flex items-center gap-4">
+          <button onclick="rewindAudio(10)" class="text-slate-400 hover:text-white transition text-xs" title="Voltar 10s">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button id="btnPlayPause" onclick="togglePlay()"
+            class="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition shadow-lg shadow-indigo-600/30">
+            <i class="fa-solid fa-play text-xs ml-0.5" id="playIcon"></i>
+          </button>
+          <button onclick="forwardAudio(10)" class="text-slate-400 hover:text-white transition text-xs" title="Avançar 10s">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+
+        <div class="w-full flex items-center gap-3">
+          <span id="currentTime" class="text-[10px] text-slate-400 font-mono w-8 text-right">0:00</span>
+          <input id="progressBar" type="range" min="0" max="100" value="0"
+            class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+          <span id="durationTime" class="text-[10px] text-slate-400 font-mono w-8">0:00</span>
+        </div>
+      </div>
+
+      <!-- Volume -->
+      <div class="flex items-center gap-3 w-full sm:w-1/4 justify-end">
+        <i class="fa-solid fa-volume-high text-xs text-slate-400"></i>
+        <input id="volumeBar" type="range" min="0" max="1" step="0.05" value="0.8" oninput="setVolume(this.value)"
+          class="w-20 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+      </div>
+
+      <audio id="mainAudio" class="hidden"></audio>
+    </div>
+  </aside>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-20 right-6 z-50 transform translate-y-8 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium"></div>
+
+  <script>
+    let allTracks = [];
+    const audio = document.getElementById('mainAudio');
+    const playIcon = document.getElementById('playIcon');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationTimeEl = document.getElementById('durationTime');
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      const isError = type === 'error';
+      toast.className = `fixed bottom-20 right-6 z-50 transform translate-y-0 opacity-100 pointer-events-auto transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium ${
+        isError ? 'bg-red-950/90 border-red-800 text-red-200' : 'bg-slate-900/90 border-slate-700 text-slate-200'
+      }`;
+      toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-xmark text-red-400' : 'fa-circle-check text-emerald-400'} text-base"></i><span>${msg}</span>`;
+      setTimeout(() => {
+        toast.classList.replace('opacity-100', 'opacity-0');
+        toast.classList.replace('translate-y-0', 'translate-y-8');
+      }, 4000);
+    }
+
+    function setPrompt(val) { document.getElementById('promptInput').value = val; }
+
+    function previewUpload(input) {
+      const file = input.files[0];
+      const btn = document.getElementById('btnUpload');
+      if (file) {
+        document.getElementById('uploadLabel').innerHTML = `<span class="text-indigo-400 font-semibold">${file.name}</span> (${(file.size / (1024*1024)).toFixed(2)} MB)`;
+        btn.disabled = false;
+        btn.className = "w-full mt-4 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/20";
+      }
+    }
+
+    // Buscar playlist do Suno
+    async function carregarSunoPlaylist() {
+      const input = document.getElementById('playlistUrlInput').value.trim();
+      const match = input.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
+      const playlistId = match ? match[0] : input;
+
+      const btn = document.getElementById('btnFetchPlaylist');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Carregando...`;
+
+      try {
+        const res = await fetch(`/api/suno/playlist/${playlistId}`);
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Erro ao buscar playlist');
+
+        // Render Header
+        document.getElementById('playlistHeader').classList.remove('hidden');
+        document.getElementById('playlistCover').src = data.image_url || 'https://cdn1.suno.ai/e73b11c0.webp';
+        document.getElementById('playlistTitle').textContent = data.name;
+        document.getElementById('playlistDesc').textContent = data.description || 'Playlist curada do Suno';
+        document.getElementById('playlistStats').textContent = `${data.tracks.length} faixas encontradas`;
+
+        // Render Tracks
+        const container = document.getElementById('sunoTracksContainer');
+        container.innerHTML = '';
+
+        data.tracks.forEach(track => {
+          const div = document.createElement('div');
+          div.className = "p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/50 flex items-center gap-3 transition group";
+          
+          div.innerHTML = `
+            <img src="${track.image_url || 'https://cdn1.suno.ai/e73b11c0.webp'}" class="w-12 h-12 rounded-lg object-cover bg-slate-900 shrink-0">
+            <div class="truncate flex-1 min-w-0">
+              <p class="text-xs font-semibold text-white truncate" title="${track.title}">${track.title}</p>
+              <p class="text-[11px] text-slate-400 truncate">${track.display_name}</p>
+              <p class="text-[10px] text-slate-500 truncate mt-0.5">${track.tags || ''}</p>
+            </div>
+            <button onclick="playTrack('${track.title.replace(/'/g, "\\'")}', '${track.audio_url}', '${track.image_url}')"
+              class="w-8 h-8 rounded-full bg-slate-800 group-hover:bg-indigo-600 text-slate-300 group-hover:text-white flex items-center justify-center transition shrink-0">
+              <i class="fa-solid fa-play text-xs ml-0.5"></i>
+            </button>
+          `;
+          container.appendChild(div);
+        });
+
+        showToast(`Playlist "${data.name}" carregada!`);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Buscar`;
+      }
+    }
+
+    async function carregarFaixas() {
+      try {
+        const res = await fetch('/api/tracks');
+        allTracks = await res.json();
+        renderTracks(allTracks);
+      } catch (err) {
+        showToast('Erro ao carregar faixas: ' + err.message, 'error');
+      }
+    }
+
+    function formatTime(s) {
+      if (isNaN(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
+    function renderTracks(tracks) {
+      const tbody = document.getElementById('tracksTable');
+      document.getElementById('trackCount').textContent = `${tracks.length} ${tracks.length === 1 ? 'faixa' : 'faixas'}`;
+      tbody.innerHTML = '';
+
+      if (tracks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>Nenhuma faixa encontrada no storage.</td></tr>';
+        return;
+      }
+
+      tracks.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition group";
+        const dateStr = t.created ? new Date(t.created).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-';
+        
+        tr.innerHTML = `
+          <td class="py-3 px-5 font-mono text-xs text-slate-200">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-file-audio text-slate-500 group-hover:text-indigo-400 transition"></i>
+              <span class="truncate max-w-xs font-sans font-medium" title="${t.name}">${t.name}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-slate-400 text-xs font-mono">${t.size}</td>
+          <td class="py-3 px-4 text-slate-400 text-xs">${dateStr}</td>
+          <td class="py-3 px-4">
+            <button onclick="playTrack('${t.name}', '${t.url}')" class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white text-xs font-medium transition">
+              <i class="fa-solid fa-play text-[10px]"></i> Ouvir
+            </button>
+          </td>
+          <td class="py-3 px-5 text-right space-x-2">
+            <button onclick="syncDrive('${t.name}')" title="Sincronizar no Google Drive" class="px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-medium transition">
+              <i class="fa-brands fa-google-drive mr-1"></i> Drive
+            </button>
+            <a href="${t.url}" download="${t.name}" title="Baixar arquivo" class="inline-block px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+              <i class="fa-solid fa-download"></i>
+            </a>
+            <button onclick="deleteTrack('${t.name}')" title="Excluir faixa" class="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-medium transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filtrarFaixas() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allTracks.filter(t => t.name.toLowerCase().includes(q));
+      renderTracks(filtered);
+    }
+
+    function playTrack(title, url, cover = null) {
+      document.getElementById('currentTrackTitle').textContent = title;
+      document.getElementById('currentTrackMeta').textContent = url.startsWith('/storage') ? 'Storage local' : 'Suno Cloud Stream';
+      
+      const coverImg = document.getElementById('playerCoverImg');
+      const iconBox = document.getElementById('playerIconBox');
+      if (cover) {
+        coverImg.src = cover;
+        coverImg.classList.remove('hidden');
+        iconBox.classList.add('hidden');
+      } else {
+        coverImg.classList.add('hidden');
+        iconBox.classList.remove('hidden');
+      }
+
+      audio.src = url;
+      audio.play();
+      playIcon.classList.replace('fa-play', 'fa-pause');
+    }
+
+    function togglePlay() {
+      if (!audio.src) return;
+      if (audio.paused) {
+        audio.play();
+        playIcon.classList.replace('fa-play', 'fa-pause');
+      } else {
+        audio.pause();
+        playIcon.classList.replace('fa-pause', 'fa-play');
+      }
+    }
+
+    function rewindAudio(sec) { audio.currentTime = Math.max(0, audio.currentTime - sec); }
+    function forwardAudio(sec) { audio.currentTime = Math.min(audio.duration, audio.currentTime + sec); }
+    function setVolume(val) { audio.volume = val; }
+
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        progressBar.value = (audio.currentTime / audio.duration) * 100;
+        currentTimeEl.textContent = formatTime(audio.currentTime);
+        durationTimeEl.textContent = formatTime(audio.duration);
+      }
+    };
+
+    progressBar.oninput = () => {
+      if (audio.duration) audio.currentTime = (progressBar.value / 100) * audio.duration;
+    };
+
+    audio.onended = () => {
+      playIcon.classList.replace('fa-pause', 'fa-play');
+    };
+
+    async function gerarMusica(e) {
+      e.preventDefault();
+      const prompt = document.getElementById('promptInput').value.trim();
+      if (!prompt) return;
+
+      const btn = document.getElementById('btnGenerate');
+      const btnText = document.getElementById('btnGenerateText');
+      btn.disabled = true;
+      btnText.textContent = 'Gerando trilha sonora...';
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Música gerada!');
+          carregarFaixas();
+        } else {
+          showToast(data.error || 'Erro na geração', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Gerar Faixa de Áudio';
+      }
+    }
+
+    async function uploadAudio() {
+      const fileInput = document.getElementById('audioFileInput');
+      if (!fileInput.files[0]) return;
+
+      const btn = document.getElementById('btnUpload');
+      const btnText = document.getElementById('btnUploadText');
+      btn.disabled = true;
+      btnText.textContent = 'Enviando...';
+
+      const formData = new FormData();
+      formData.append('audio', fileInput.files[0]);
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Upload concluído com sucesso!');
+          fileInput.value = '';
+          document.getElementById('uploadLabel').textContent = 'Clique para selecionar ou arraste um arquivo MP3';
+          btn.className = "w-full mt-4 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed";
+          carregarFaixas();
+        } else {
+          showToast(data.error || 'Erro no upload', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Enviar para Storage';
+      }
+    }
+
+    async function syncDrive(name) {
+      try {
+        showToast('Enviando para o Google Drive...');
+        const res = await fetch('/api/sync-drive/' + encodeURIComponent(name), { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Sincronizado com Google Drive!');
+        } else {
+          showToast(data.error || 'Falha ao sincronizar', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function deleteTrack(name) {
+      if (!confirm(`Deseja realmente excluir a faixa "${name}"?`)) return;
+      try {
+        const res = await fetch('/api/tracks/' + encodeURIComponent(name), { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Faixa excluída');
+          carregarFaixas();
+        } else {
+          showToast(data.error || 'Erro ao excluir', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Inicialização
+    carregarFaixas();
+    carregarSunoPlaylist();
+  </script>
+</body>
+</html>
