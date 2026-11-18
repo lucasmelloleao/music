@@ -24,12 +24,13 @@ while true; do
     echo "[Live Stream] ${TOTAL} faixas no loop da transmissão."
 
     # 3. Transmissão 24/7 direto do CDN para o YouTube sem salvar nada em disco
-    ffmpeg -hide_banner -re -loop 1 -framerate 25 -i "$IMAGE_BACKGROUND" \
-        -re -f concat -safe 0 -protocol_whitelist file,http,https,tcp,tls -i /tmp/suno_stream_list.txt \
+    ffmpeg -hide_banner -loop 1 -framerate 25 -i "$IMAGE_BACKGROUND" \
+        -f concat -safe 0 -protocol_whitelist file,http,https,tcp,tls -i /tmp/suno_stream_list.txt \
         -map 0:v:0 -map 1:a:0 \
         -c:v libx264 -preset veryfast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
         -pix_fmt yuv420p -r 25 -fps_mode cfr -g 50 -keyint_min 50 -sc_threshold 0 -flags +cgop \
         -c:a aac -b:a 128k -ar 44100 -ac 2 \
+        -readrate 1 -readrate_initial_burst 0 \
         -flvflags no_duration_filesize \
         -f flv "$RTMP_DESTINATION"
 
