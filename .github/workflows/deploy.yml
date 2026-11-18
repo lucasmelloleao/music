@@ -1,0 +1,39 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Hetzner Server via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HETZNER_HOST }}
+        username: ${{ secrets.HETZNER_USER }}
+        key: ${{ secrets.HETZNER_SSH_KEY }}
+        port: 22
+        script: |
+          mkdir -p ~/music-app
+          cd ~/music-app
+
+          # Clona ou atualiza repositório
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/${{ github.repository }}.git .
+          else
+            git pull origin main
+          fi
+
+          # Garante permissão de execução
+          chmod +x stream.sh
+
+          # Reconstrói e reinicia container Docker
+          docker compose down || true
+          docker compose build --no-cache
+          docker compose up -d
