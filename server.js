@@ -6,7 +6,11 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const cors = require('cors');
+const { spawn } = require('child_process');
 const Replicate = require('replicate');
+
+let streamProcess = null;
+let streamStatus = { running: false, pid: null, startedAt: null, lastLog: '' };
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -283,6 +287,60 @@ app.delete('/api/tracks/:filename', (req, res) => {
         return res.json({ message: 'Faixa excluída.' });
     }
     res.status(404).json({ error: 'Arquivo não encontrado.' });
+});
+
+// 6. Controle da Transmissão ao Vivo para YouTube
+app.get('/api/stream/status', (req, res) => {
+    res.json(streamStatus);
+});
+
+app.post('/api/stream/start', (req, res) => {
+    if (streamProcess && streamStatus.running) {
+        return res.json({ message: 'Transmissão já está em andamento.', status: streamStatus });
+    }
+
+    const scriptPath = path.join(__dirname, 'stream.sh');
+    streamProcess = spawn('bash', [scriptPath], {
+        env: process.env,
+        stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    streamStatus = {
+        running: true,
+        pid: streamProcess.pid,
+        startedAt: new Date(),
+        lastLog: 'Iniciando live...'
+    };
+
+    streamProcess.stdout.on('data', data => {
+        streamStatus.lastLog = data.toString().trim().split('\n').pop();
+    });
+
+    streamProcess.stderr.on('data', data => {
+        streamStatus.lastLog = data.toString().trim().split('\n').pop();
+    });
+
+    streamProcess.on('close', code => {
+        streamStatus = {
+            running: false,
+            pid: null,
+            startedAt: null,
+            lastLog: `Processo encerrado com código ${code}`
+        };
+        streamProcess = null;
+    });
+
+    res.json({ message: 'Live iniciada com sucesso!', status: streamStatus });
+});
+
+app.post('/api/stream/stop', (req, res) => {
+    if (streamProcess) {
+        streamProcess.kill('SIGTERM');
+        streamProcess = null;
+        streamStatus.running = false;
+        return res.json({ message: 'Transmissão interrompida.' });
+    }
+    res.json({ message: 'Nenhuma transmissão ativa.' });
 });
 
 // Inicia servidor

@@ -21,5 +21,5 @@ RUN mkdir -p storage temp
 
 EXPOSE 3001
 
-# Script de inicialização: roda a API Node e o Stream simultaneamente
-CMD ["sh", "-c", "node server.js & ./stream.sh"]
+# Inicia o servidor web
+CMD ["node", "server.js"]
